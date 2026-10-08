@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local environment — never commit secrets. See .env.example.
+.env
+.env.*
+!.env.example
+
+.DS_Store

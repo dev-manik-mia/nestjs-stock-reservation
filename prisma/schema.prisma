@@ -1,0 +1,39 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// Never blank; also enforced by the `product_name_not_blank` CHECK constraint.
+  name      String   @db.VarChar(255)
+  /// Never negative; also enforced by the `product_stock_non_negative` CHECK constraint.
+  stock     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations ReservationRequest[]
+}
+
+/// One row per idempotency key. The unique constraint on `idempotencyKey` is
+/// what makes concurrent retries of the same request safe.
+model ReservationRequest {
+  id                 String   @id @db.Uuid
+  idempotencyKey     String   @unique @db.VarChar(255)
+  /// SHA-256 of the canonical request body; detects key reuse with a different payload.
+  requestFingerprint String   @db.Char(64)
+  productId          String   @db.Uuid
+  /// Always positive; also enforced by the `reservation_quantity_positive` CHECK constraint.
+  quantity           Int
+  /// The response returned to the client, replayed verbatim on retries.
+  result             Json
+  createdAt          DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+}
